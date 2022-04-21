@@ -9,7 +9,17 @@ let users: {
   stream?: MediaStream;
 }[] = [];
 
+let consumers: {
+  username: string;
+  peer: RTCPeerConnection;
+}[] = [];
+
 const queuedOffers: {
+  username: string;
+  offers: RTCIceCandidate[];
+}[] = [];
+
+const queuedConsumerOffers: {
   username: string;
   offers: RTCIceCandidate[];
 }[] = [];
@@ -33,50 +43,31 @@ export const socketController = (socket: Socket, _io: Server) => {
           { urls: "stun:stun.l.google.com:19302" },
         ],
       });
-      users.map((u) => {
-        if (u.username !== username) {
-          // stream!.getTracks().forEach((track) => {
-          //   u.peer.addTrack(track, stream!);
-          // });
-          console.log("have stream sending ");
-          u.stream?.getTracks().forEach((track) => {
-            peer.addTrack(track, u.stream!);
-          });
-        }
-      });
+      // users.map((u) => {
+      //   if (u.username !== username) {
+      //     console.log("have stream sending ");
+      //     u.stream?.getTracks().forEach((track) => {
+      //       peer.addTrack(track, u.stream!);
+      //     });
+      //   }
+      // });
       peer.ontrack = (e) => {
         console.log("---------------- on track");
-        console.log({ username, users });
         if (e.streams && e.streams[0]) {
-          console.log(e.streams[0].getTracks());
           stream = e.streams[0];
         } else {
           console.log("--------------- NOOOOOOOOOOO");
         }
       };
 
-      await peer
-        .setRemoteDescription(new webrtc.RTCSessionDescription(offer))
-        .then(() => {
-          // console.log("set remote description");
-          // users.map((u) => {
-          //   if (u.username !== username) {
-          //     if (stream) {
-          //       console.log("have stream");
-          //       stream.getTracks().forEach((track) => {
-          //         u.peer.addTrack(track);
-          //       });
-          //     } else {
-          //       console.log("no stream");
-          //     }
-          //   }
-          // });
-        });
+      await peer.setRemoteDescription(new webrtc.RTCSessionDescription(offer));
+
       users.push({
         username: username,
         peer,
         stream,
       });
+      socket.broadcast.emit("new-user", { username, peer });
 
       const answer = await peer.createAnswer();
       await peer.setLocalDescription(answer);
@@ -131,7 +122,77 @@ export const socketController = (socket: Socket, _io: Server) => {
   });
 
   socket.on("get-media", () => {
-    // console.log("on media");
     socket.emit("all-user", { users });
+  });
+
+  socket.on("consumer", async ({ offer, username }) => {
+    const peer: RTCPeerConnection = new webrtc.RTCPeerConnection({
+      iceServers: [
+        { urls: "stun:stun.stunprotocol.org:3478" },
+        { urls: "stun:stun.l.google.com:19302" },
+      ],
+    });
+    users.map((u) => {
+      if (u.username !== username) {
+        console.log("sending stream ");
+        u.stream?.getTracks().forEach((track) => {
+          peer.addTrack(track, u.stream!);
+        });
+      }
+    });
+
+    await peer.setRemoteDescription(new webrtc.RTCSessionDescription(offer));
+
+    consumers.push({
+      username,
+      peer,
+    });
+
+    const answer = await peer.createAnswer();
+    await peer.setLocalDescription(answer);
+    // Check if have offer queued
+    const offers = queuedConsumerOffers.find((o) => o.username === username);
+    if (offers) {
+      offers.offers.forEach((offer) => {
+        peer.addIceCandidate(new webrtc.RTCIceCandidate(offer));
+      });
+    }
+    peer.onconnectionstatechange = () => {
+      console.log(
+        "consumer: " + username + " connection state: ",
+        peer.connectionState
+      );
+    };
+    peer.onicecandidate = (e) => {
+      console.log("have answer candidate");
+      if (e.candidate) {
+        socket.emit("consumer-add-answer-candidate", {
+          candidate: e.candidate,
+        });
+      }
+    };
+
+    socket.emit("consumer-answer", { answer });
+  });
+
+  socket.on("consumer-add-offer-candidate", ({ candidate, username }) => {
+    console.log("had offer candidate");
+    // Check if user is in users object
+    const consumer = consumers.find((u) => u.username === username);
+    if (!consumer) {
+      // No user => Queu Offer Candidate
+      // check if already have offer queued
+      const queued = queuedConsumerOffers.find(
+        (qo) => qo.username === username
+      );
+      if (!queued) {
+        queuedConsumerOffers.push({ username, offers: [candidate] });
+      } else {
+        queued.offers.push(candidate);
+      }
+    } else {
+      // Have User in UsersObject => add candidate to peer
+      consumer.peer.addIceCandidate(new webrtc.RTCIceCandidate(candidate));
+    }
   });
 };

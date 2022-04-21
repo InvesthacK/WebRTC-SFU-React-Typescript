@@ -5,7 +5,9 @@ import { v1 } from "uuid";
 import { toast } from "react-toastify";
 import Call from "./Call";
 
-export const socket = io("http://localhost:5050");
+export const socket = io("http://localhost:5050", {
+  reconnection: false,
+});
 
 interface User {
   username: string;
@@ -15,10 +17,8 @@ interface User {
 function App() {
   const queuedAnswer = useRef<RTCIceCandidate[]>([]);
   const localRef = useRef<HTMLVideoElement>(null);
-  const [media, setMedia] = useState<MediaStream | undefined>(undefined);
   const [users, setUsers] = useState<User[]>([]);
-  const remoteMedia = useMemo(() => new MediaStream(), []);
-  const remoteRef = useRef<HTMLVideoElement>(null);
+  const [start, setStart] = useState(false);
 
   const localConnection = useMemo(() => {
     const pc = new RTCPeerConnection({
@@ -27,14 +27,14 @@ function App() {
         { urls: "stun:stun.l.google.com:19302" },
       ],
     });
-    pc.ontrack = (e) => {
-      console.log("%c On Track", "background: blue; color:white");
-      if (e.streams && e.streams[0]) {
-        if (remoteRef.current) {
-          remoteRef.current.srcObject = e.streams[0];
-        }
-      }
-    };
+    // pc.ontrack = (e) => {
+    //   console.log("%c On Track", "background: blue; color:white");
+    //   if (e.streams && e.streams[0]) {
+    //     if (remoteRef.current) {
+    //       remoteRef.current.srcObject = e.streams[0];
+    //     }
+    //   }
+    // };
     // pc.addTransceiver("video", { direction: "recvonly" });
     return pc;
   }, []);
@@ -64,12 +64,6 @@ function App() {
         });
       });
   };
-
-  useEffect(() => {
-    if (remoteRef.current) {
-      remoteRef.current.srcObject = remoteMedia;
-    }
-  }, [remoteRef.current]);
 
   useEffect(() => {
     getUserVideo().then(() => {
@@ -130,6 +124,10 @@ function App() {
       console.log(users);
       setUsers(users);
     });
+    socket.on("new-user", (user) => {
+      console.log("new user");
+      setUsers((prev) => [...prev, user]);
+    });
   }, []);
 
   return (
@@ -137,17 +135,25 @@ function App() {
       <div>
         <h3>Username: {username}</h3>
       </div>
-      <video ref={localRef} autoPlay></video>
-
       <div>
-        <button onClick={() => {}}>GET Users</button>
+        <button
+          onClick={() => {
+            setStart(true);
+          }}
+        >
+          Start
+        </button>
       </div>
-      {users.map((user) => (
-        <React.Fragment key={user.username}>
-          <h3>User: {user.username}</h3>
-          <video autoPlay ref={remoteRef}></video>
-        </React.Fragment>
-      ))}
+      <div className="videos">
+        <span>
+          <video ref={localRef} autoPlay></video>
+          <h3>Local</h3>
+        </span>
+        {start &&
+          users.map((user) => (
+            <Call key={user.username} user={user} username={username} />
+          ))}
+      </div>
     </div>
   );
 }
