@@ -20,8 +20,12 @@ const Call: React.FC<CallProps> = ({ user, username }) => {
     console.log("create connection");
     const pc = new RTCPeerConnection({
       iceServers: [
-        { urls: "stun:stun.stunprotocol.org:3478" },
-        { urls: "stun:stun.l.google.com:19302" },
+        { urls: import.meta.env.VITE_STUNSERVER_1 },
+        {
+          urls: import.meta.env.VITE_STUNSERVER_2,
+          username: import.meta.env.VITE_XIRSYS_USERNAME,
+          credential: import.meta.env.VITE_XIRSYS_CREDENTIAL,
+        },
       ],
     });
     pc.ontrack = (e) => {
@@ -32,7 +36,7 @@ const Call: React.FC<CallProps> = ({ user, username }) => {
         }
       }
     };
-    // pc.addTransceiver("video", { direction: "recvonly" });
+    pc.addTransceiver("video", { direction: "recvonly" });
     return pc;
   }, [user]);
 
@@ -68,10 +72,12 @@ const Call: React.FC<CallProps> = ({ user, username }) => {
     });
 
     localConnection.onicecandidate = (event) => {
-      console.log("send offer candidate");
+      console.log("send offer candidate to ", user.username);
       if (event.candidate) {
         socket.emit("consumer-add-offer-candidate", {
           candidate: event.candidate,
+          username,
+          streamName: user.username,
         });
       }
     };
@@ -98,6 +104,9 @@ const Call: React.FC<CallProps> = ({ user, username }) => {
         "%c Connection State: " + localConnection.connectionState,
         "background: skyblue; color:black"
       );
+      toast(localConnection.connectionState, {
+        type: localConnection.connectionState === "failed" ? "error" : "info",
+      });
     };
 
     return () => {

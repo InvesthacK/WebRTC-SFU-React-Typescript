@@ -12,6 +12,7 @@ let users: {
 let consumers: {
   username: string;
   peer: RTCPeerConnection;
+  streamName: string;
 }[] = [];
 
 const queuedOffers: {
@@ -23,8 +24,6 @@ const queuedConsumerOffers: {
   username: string;
   offers: RTCIceCandidate[];
 }[] = [];
-
-// const streams: any[] = [];
 
 export const socketController = (socket: Socket, _io: Server) => {
   socket.on(
@@ -39,18 +38,14 @@ export const socketController = (socket: Socket, _io: Server) => {
       let stream: MediaStream | undefined;
       const peer: RTCPeerConnection = new webrtc.RTCPeerConnection({
         iceServers: [
-          { urls: "stun:stun.stunprotocol.org:3478" },
-          { urls: "stun:stun.l.google.com:19302" },
+          { urls: process.env.STUNSERVER_1 },
+          {
+            urls: process.env.STUNSERVER_2,
+            username: process.env.XIRSYS_USERNAME,
+            credential: process.env.XIRSYS_CREDENTIAL,
+          },
         ],
       });
-      // users.map((u) => {
-      //   if (u.username !== username) {
-      //     console.log("have stream sending ");
-      //     u.stream?.getTracks().forEach((track) => {
-      //       peer.addTrack(track, u.stream!);
-      //     });
-      //   }
-      // });
       peer.ontrack = (e) => {
         console.log("---------------- on track");
         if (e.streams && e.streams[0]) {
@@ -80,10 +75,6 @@ export const socketController = (socket: Socket, _io: Server) => {
       }
 
       peer.onconnectionstatechange = () => {
-        // console.log(
-        //   "user: " + username + " connection state: ",
-        //   peer.connectionState
-        // );
         if (peer.connectionState === "connected") {
         }
       };
@@ -98,6 +89,7 @@ export const socketController = (socket: Socket, _io: Server) => {
       socket.emit("answer", { answer });
       socket.on("disconnect", () => {
         users = users.filter((u) => u.username !== username);
+        consumers = consumers.filter((u) => u.username === username);
         socket.broadcast.emit("user-leave", { users });
       });
     }
@@ -129,8 +121,12 @@ export const socketController = (socket: Socket, _io: Server) => {
   socket.on("consumer", async ({ offer, username, streamName }) => {
     const peer: RTCPeerConnection = new webrtc.RTCPeerConnection({
       iceServers: [
-        { urls: "stun:stun.stunprotocol.org:3478" },
-        { urls: "stun:stun.l.google.com:19302" },
+        { urls: process.env.STUNSERVER_1 },
+        {
+          urls: process.env.STUNSERVER_2,
+          username: process.env.XIRSYS_USERNAME,
+          credential: process.env.XIRSYS_CREDENTIAL,
+        },
       ],
     });
     users.map((u) => {
@@ -147,6 +143,7 @@ export const socketController = (socket: Socket, _io: Server) => {
     consumers.push({
       username,
       peer,
+      streamName,
     });
 
     const answer = await peer.createAnswer();
@@ -178,24 +175,39 @@ export const socketController = (socket: Socket, _io: Server) => {
     socket.emit("consumer-answer", { answer, to: username, streamName });
   });
 
-  socket.on("consumer-add-offer-candidate", ({ candidate, username }) => {
-    console.log("had offer candidate");
-    // Check if user is in users object
-    const consumer = consumers.find((u) => u.username === username);
-    if (!consumer) {
-      // No user => Queu Offer Candidate
-      // check if already have offer queued
-      const queued = queuedConsumerOffers.find(
-        (qo) => qo.username === username
+  socket.on(
+    "consumer-add-offer-candidate",
+    ({ candidate, username, streamName }) => {
+      console.log("had offer candidate");
+      // Check if user is in users object
+      const consumer = consumers.find(
+        (u) => u.username === username && streamName === streamName
       );
-      if (!queued) {
-        queuedConsumerOffers.push({ username, offers: [candidate] });
+      if (!consumer) {
+        // No user => Queu Offer Candidate
+        // check if already have offer queued
+        const queued = queuedConsumerOffers.find(
+          (qo) => qo.username === username
+        );
+        if (!queued) {
+          queuedConsumerOffers.push({ username, offers: [candidate] });
+        } else {
+          queued.offers.push(candidate);
+        }
       } else {
-        queued.offers.push(candidate);
+        // Have User in UsersObject => add candidate to peer
+        consumer.peer.addIceCandidate(new webrtc.RTCIceCandidate(candidate));
       }
-    } else {
-      // Have User in UsersObject => add candidate to peer
-      consumer.peer.addIceCandidate(new webrtc.RTCIceCandidate(candidate));
     }
+  );
+
+  socket.on("log", () => {
+    socket.emit("logging", { users, consumers });
+  });
+
+  socket.on("clear", () => {
+    users = [];
+    consumers = [];
+    console.log("clearing users---");
   });
 };

@@ -7,9 +7,19 @@ const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: ["http://localhost:3000", "http://localhost:3030"],
+    origin: [
+      "http://localhost:3000",
+      "http://localhost:3030",
+      "https://subtle-strudel-a68d20.netlify.app",
+      process.env.CLIENT!,
+      "https://azerbaijan-hp-qld-blade.trycloudflare.com",
+    ],
   },
 });
+
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const port = process.env.PORT || 5050;
 app.use(cors());
