@@ -27,15 +27,6 @@ function App() {
         { urls: "stun:stun.l.google.com:19302" },
       ],
     });
-    // pc.ontrack = (e) => {
-    //   console.log("%c On Track", "background: blue; color:white");
-    //   if (e.streams && e.streams[0]) {
-    //     if (remoteRef.current) {
-    //       remoteRef.current.srcObject = e.streams[0];
-    //     }
-    //   }
-    // };
-    // pc.addTransceiver("video", { direction: "recvonly" });
     return pc;
   }, []);
   const [username, _] = useState(v1());
@@ -50,19 +41,17 @@ function App() {
   };
 
   const getUserVideo = async () => {
-    return navigator.mediaDevices
-      .getUserMedia({ video: true })
-      .then((media) => {
-        if (localRef.current) {
-          localRef.current.srcObject = media;
-        } else {
-          toast("No LocalRef", { type: "error" });
-        }
-        media.getTracks().forEach((track) => {
-          console.log("send track");
-          localConnection.addTrack(track, media);
-        });
+    return navigator.mediaDevices.getDisplayMedia().then((media) => {
+      if (localRef.current) {
+        localRef.current.srcObject = media;
+      } else {
+        toast("No LocalRef", { type: "error" });
+      }
+      media.getTracks().forEach((track) => {
+        console.log("send track");
+        localConnection.addTrack(track, media);
       });
+    });
   };
 
   useEffect(() => {
@@ -80,6 +69,7 @@ function App() {
                 localConnection.addIceCandidate(new RTCIceCandidate(a));
               });
             }
+            socket.emit("get-media");
           });
       });
 
@@ -111,7 +101,6 @@ function App() {
           "background: red; color:white"
         );
       };
-      socket.emit("get-media");
     });
 
     return () => {
@@ -128,7 +117,15 @@ function App() {
       console.log("new user");
       setUsers((prev) => [...prev, user]);
     });
+    socket.on("user-leave", ({ users }) => {
+      console.log("user leave");
+      setUsers(users);
+    });
   }, []);
+
+  useEffect(() => {
+    console.log({ users });
+  }, [users]);
 
   return (
     <div className="App">
@@ -144,15 +141,23 @@ function App() {
           Start
         </button>
       </div>
-      <div className="videos">
+      <div>
         <span>
           <video ref={localRef} autoPlay></video>
           <h3>Local</h3>
         </span>
+      </div>
+      <div className="videos">
         {start &&
-          users.map((user) => (
-            <Call key={user.username} user={user} username={username} />
-          ))}
+          users.map((user) => {
+            if (user.username !== username) {
+              return (
+                <Call key={user.username} user={user} username={username} />
+              );
+            } else {
+              return null;
+            }
+          })}
       </div>
     </div>
   );

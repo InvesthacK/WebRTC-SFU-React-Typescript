@@ -98,6 +98,7 @@ export const socketController = (socket: Socket, _io: Server) => {
       socket.emit("answer", { answer });
       socket.on("disconnect", () => {
         users = users.filter((u) => u.username !== username);
+        socket.broadcast.emit("user-leave", { users });
       });
     }
   );
@@ -125,7 +126,7 @@ export const socketController = (socket: Socket, _io: Server) => {
     socket.emit("all-user", { users });
   });
 
-  socket.on("consumer", async ({ offer, username }) => {
+  socket.on("consumer", async ({ offer, username, streamName }) => {
     const peer: RTCPeerConnection = new webrtc.RTCPeerConnection({
       iceServers: [
         { urls: "stun:stun.stunprotocol.org:3478" },
@@ -133,7 +134,7 @@ export const socketController = (socket: Socket, _io: Server) => {
       ],
     });
     users.map((u) => {
-      if (u.username !== username) {
+      if (u.username == streamName) {
         console.log("sending stream ");
         u.stream?.getTracks().forEach((track) => {
           peer.addTrack(track, u.stream!);
@@ -168,11 +169,13 @@ export const socketController = (socket: Socket, _io: Server) => {
       if (e.candidate) {
         socket.emit("consumer-add-answer-candidate", {
           candidate: e.candidate,
+          to: username,
+          streamName,
         });
       }
     };
 
-    socket.emit("consumer-answer", { answer });
+    socket.emit("consumer-answer", { answer, to: username, streamName });
   });
 
   socket.on("consumer-add-offer-candidate", ({ candidate, username }) => {

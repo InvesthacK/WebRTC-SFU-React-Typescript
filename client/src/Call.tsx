@@ -47,20 +47,24 @@ const Call: React.FC<CallProps> = ({ user, username }) => {
 
   useEffect(() => {
     createOffer().then((offer) => {
-      // socket.emit("join", { username, offer });
-      socket.emit("consumer", { offer, username });
+      socket.emit("consumer", { offer, username, streamName: user.username });
     });
-    socket.on("consumer-answer", ({ answer }) => {
-      console.log("%c comsumber have answer", "background: grey; color:white");
-      localConnection
-        .setRemoteDescription(new RTCSessionDescription(answer))
-        .then(() => {
-          if (queuedAnswer.current.length > 0) {
-            queuedAnswer.current.forEach((a) => {
-              localConnection.addIceCandidate(new RTCIceCandidate(a));
-            });
-          }
-        });
+    socket.on("consumer-answer", ({ answer, to, streamName }) => {
+      if (to === username && streamName === user.username) {
+        console.log(
+          "%c comsumber have answer",
+          "background: grey; color:white"
+        );
+        localConnection
+          .setRemoteDescription(new RTCSessionDescription(answer))
+          .then(() => {
+            if (queuedAnswer.current.length > 0) {
+              queuedAnswer.current.forEach((a) => {
+                localConnection.addIceCandidate(new RTCIceCandidate(a));
+              });
+            }
+          });
+      }
     });
 
     localConnection.onicecandidate = (event) => {
@@ -72,19 +76,27 @@ const Call: React.FC<CallProps> = ({ user, username }) => {
       }
     };
 
-    socket.on("consumer-add-answer-candidate", ({ candidate }) => {
-      console.log("%c had answer candidate", "background: green; color:white");
-      if (localConnection.currentLocalDescription) {
-        localConnection.addIceCandidate(new RTCIceCandidate(candidate));
-      } else {
-        queuedAnswer.current.push(candidate);
+    socket.on(
+      "consumer-add-answer-candidate",
+      ({ candidate, to, streamName }) => {
+        if (to === username && streamName === user.username) {
+          console.log(
+            "%c had answer candidate",
+            "background: green; color:white"
+          );
+          if (localConnection.currentLocalDescription) {
+            localConnection.addIceCandidate(new RTCIceCandidate(candidate));
+          } else {
+            queuedAnswer.current.push(candidate);
+          }
+        }
       }
-    });
+    );
 
     localConnection.onconnectionstatechange = () => {
       console.log(
         "%c Connection State: " + localConnection.connectionState,
-        "background: red; color:white"
+        "background: skyblue; color:black"
       );
     };
 
@@ -92,7 +104,7 @@ const Call: React.FC<CallProps> = ({ user, username }) => {
       socket.off("consumer-answer");
       socket.off("consumer-add-answer-candidate");
     };
-  }, []);
+  }, [username]);
 
   return (
     <span>
