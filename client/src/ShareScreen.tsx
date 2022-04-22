@@ -54,18 +54,20 @@ const ShareScreen: React.FC<ShareScreenProps> = ({}) => {
       createOffer().then((offer) => {
         socket.emit("join", { username, offer });
       });
-      socket.on("answer", ({ answer }) => {
+      socket.on("answer", ({ answer, to }) => {
         console.log("have answer");
-        localConnection
-          .setRemoteDescription(new RTCSessionDescription(answer))
-          .then(() => {
-            if (queuedAnswer.current.length > 0) {
-              queuedAnswer.current.forEach((a) => {
-                localConnection.addIceCandidate(new RTCIceCandidate(a));
-              });
-            }
-            socket.emit("get-media");
-          });
+        if (to === username) {
+          localConnection
+            .setRemoteDescription(new RTCSessionDescription(answer))
+            .then(() => {
+              if (queuedAnswer.current.length > 0) {
+                queuedAnswer.current.forEach((a) => {
+                  localConnection.addIceCandidate(new RTCIceCandidate(a));
+                });
+              }
+              socket.emit("get-media");
+            });
+        }
       });
 
       localConnection.onicecandidate = (event) => {

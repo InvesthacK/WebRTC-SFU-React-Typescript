@@ -7,6 +7,7 @@ let users: {
   username: string;
   peer: RTCPeerConnection;
   stream?: MediaStream;
+  dataChannel?: RTCDataChannel;
 }[] = [];
 
 let consumers: {
@@ -36,6 +37,7 @@ export const socketController = (socket: Socket, _io: Server) => {
       offer: RTCSessionDescriptionInit;
     }) => {
       let stream: MediaStream | undefined;
+      let dataChannel: RTCDataChannel | undefined;
       const peer: RTCPeerConnection = new webrtc.RTCPeerConnection({
         iceServers: [
           { urls: process.env.STUNSERVER_1 },
@@ -55,13 +57,36 @@ export const socketController = (socket: Socket, _io: Server) => {
         }
       };
 
+      peer.ondatachannel = (e) => {
+        console.log("ohh data channel :)");
+        // dataChannel = e.channel;
+        users.forEach((u) => {
+          if (u.username === username) {
+            u.dataChannel = e.channel;
+          }
+        });
+        e.channel.onmessage = (_e) => {
+          console.log(_e.data);
+          // e.channel.send(_e.data);
+          users.map((u) => {
+            if (u.dataChannel) {
+              u.dataChannel.send(_e.data);
+            } else {
+              console.log("no data channel");
+            }
+          });
+        };
+      };
+
       await peer.setRemoteDescription(new webrtc.RTCSessionDescription(offer));
 
       users.push({
         username: username,
         peer,
         stream,
+        dataChannel,
       });
+
       socket.broadcast.emit("new-user", { username, peer });
 
       const answer = await peer.createAnswer();
@@ -86,7 +111,7 @@ export const socketController = (socket: Socket, _io: Server) => {
         }
       };
 
-      socket.emit("answer", { answer });
+      socket.emit("answer", { answer, to: username });
       socket.on("disconnect", () => {
         users = users.filter((u) => u.username !== username);
         consumers = consumers.filter((u) => u.username === username);

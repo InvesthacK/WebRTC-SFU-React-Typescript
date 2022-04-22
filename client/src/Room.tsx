@@ -4,6 +4,7 @@ import { v1 } from "uuid";
 import { toast, ToastContainer } from "react-toastify";
 import Call from "./Call";
 import { socket } from "./App";
+import Message from "./Message";
 
 interface User {
   username: string;
@@ -15,6 +16,7 @@ const Room: React.FC<{ media: MediaStream }> = ({ media }) => {
   const localRef = useRef<HTMLVideoElement>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [start, setStart] = useState(false);
+  const [dataChannel, setDataChannel] = useState<RTCDataChannel | null>(null);
 
   const localConnection = useMemo(() => {
     const pc = new RTCPeerConnection({
@@ -27,6 +29,11 @@ const Room: React.FC<{ media: MediaStream }> = ({ media }) => {
         },
       ],
     });
+    const channel = pc.createDataChannel("label");
+    channel.onopen = () => {
+      console.log("%c Data channel opened", "background: blue; color:white");
+      setDataChannel(channel);
+    };
     return pc;
   }, []);
   const [username, _] = useState(v1());
@@ -57,18 +64,20 @@ const Room: React.FC<{ media: MediaStream }> = ({ media }) => {
       createOffer().then((offer) => {
         socket.emit("join", { username, offer });
       });
-      socket.on("answer", ({ answer }) => {
+      socket.on("answer", ({ answer, to }) => {
         console.log("have answer");
-        localConnection
-          .setRemoteDescription(new RTCSessionDescription(answer))
-          .then(() => {
-            if (queuedAnswer.current.length > 0) {
-              queuedAnswer.current.forEach((a) => {
-                localConnection.addIceCandidate(new RTCIceCandidate(a));
-              });
-            }
-            socket.emit("get-media");
-          });
+        if (to === username) {
+          localConnection
+            .setRemoteDescription(new RTCSessionDescription(answer))
+            .then(() => {
+              if (queuedAnswer.current.length > 0) {
+                queuedAnswer.current.forEach((a) => {
+                  localConnection.addIceCandidate(new RTCIceCandidate(a));
+                });
+              }
+              socket.emit("get-media");
+            });
+        }
       });
 
       localConnection.onicecandidate = (event) => {
@@ -163,6 +172,7 @@ const Room: React.FC<{ media: MediaStream }> = ({ media }) => {
           <video ref={localRef} autoPlay></video>
           <h3>Local</h3>
         </span>
+        {dataChannel && <Message dataChannel={dataChannel} />}
       </div>
       <div className="videos">
         {start &&
