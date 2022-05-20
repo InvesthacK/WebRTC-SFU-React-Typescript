@@ -15,7 +15,8 @@
     "watch": "tsc -w",
     "dev": "nodemon ./dist/server.js",
     "start": "node dist/server.js",
-    "build": "tsc"
+    "build": "tsc",
+    "con": "concurrently \"yarn watch\" \"yarn dev\""
   },
   "name": "server",
   "version": "1.0.0",

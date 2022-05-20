@@ -83,6 +83,7 @@ const Room: React.FC<{ media: MediaStream }> = ({ media }) => {
       localConnection.onicecandidate = (event) => {
         console.log("send offer candidate");
         if (event.candidate) {
+          console.log(event.candidate);
           socket.emit("add-offer-candidate", {
             candidate: event.candidate,
             username,

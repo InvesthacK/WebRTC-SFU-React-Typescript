@@ -1,10 +1,19 @@
 import express from "express";
-import { createServer } from "http";
+import { createServer } from "https";
 import { Server } from "socket.io";
 import cors from "cors";
 import { socketController } from "./socketController";
+import fs from "fs";
+import * as path from "path";
 const app = express();
-const httpServer = createServer(app);
+
+const options = {
+  key: fs.readFileSync(path.join(__dirname, "..", "/keys/privkey.pem")),
+  cert: fs.readFileSync(path.join(__dirname, "..", "/keys/fullchain.pem")),
+};
+
+const httpServer = createServer(options, app);
+
 const io = new Server(httpServer, {
   cors: {
     origin: [
@@ -12,6 +21,8 @@ const io = new Server(httpServer, {
       "http://localhost:3030",
       "https://subtle-strudel-a68d20.netlify.app",
       process.env.CLIENT!,
+      "https://investhack.tech",
+      "https://www.investhack.tech",
       "https://azerbaijan-hp-qld-blade.trycloudflare.com",
     ],
   },
