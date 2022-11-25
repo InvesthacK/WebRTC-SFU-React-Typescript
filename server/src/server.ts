@@ -6,15 +6,7 @@ import { socketController } from "./socketController";
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
-  cors: {
-    origin: [
-      "http://localhost:3000",
-      "http://localhost:3030",
-      "https://subtle-strudel-a68d20.netlify.app",
-      process.env.CLIENT!,
-      "https://azerbaijan-hp-qld-blade.trycloudflare.com",
-    ],
-  },
+  cors: {},
 });
 
 import dotenv from "dotenv";
@@ -25,6 +17,7 @@ const port = process.env.PORT || 5050;
 app.use(cors());
 
 io.on("connection", (socket) => {
+  console.log("get connection");
   socketController(socket, io);
 });
 
