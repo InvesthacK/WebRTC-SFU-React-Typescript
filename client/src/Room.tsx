@@ -18,6 +18,8 @@ const Room: React.FC<{ media: MediaStream }> = ({ media }) => {
   const [start, setStart] = useState(false);
   const [dataChannel, setDataChannel] = useState<RTCDataChannel | null>(null);
 
+  useEffect(() => {}, []);
+
   const localConnection = useMemo(() => {
     const pc = new RTCPeerConnection({
       iceServers: [
@@ -29,6 +31,7 @@ const Room: React.FC<{ media: MediaStream }> = ({ media }) => {
         },
       ],
     });
+
     const channel = pc.createDataChannel("label");
     channel.onopen = () => {
       console.log("%c Data channel opened", "background: blue; color:white");
