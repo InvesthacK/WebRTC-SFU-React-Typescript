@@ -1,3 +1,9 @@
 dist/
 node_modules
 yarn-error.log
+
+
+
+# SSH Keys
+fullchain.pem
+privkey.pem

@@ -1,10 +1,19 @@
 import express from "express";
-import { createServer } from "http";
+import { createServer } from "https";
 import { Server } from "socket.io";
 import cors from "cors";
 import { socketController } from "./socketController";
+import fs from "fs";
+import * as path from "path";
 const app = express();
-const httpServer = createServer(app);
+
+const options = {
+  key: fs.readFileSync(path.join(__dirname, "..", "/keys/privkey.pem")),
+  cert: fs.readFileSync(path.join(__dirname, "..", "/keys/fullchain.pem")),
+};
+
+const httpServer = createServer(options, app);
+
 const io = new Server(httpServer, {
   cors: {},
 });

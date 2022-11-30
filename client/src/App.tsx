@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { io } from "socket.io-client";
 import Room from "./Room";
 import ShareScreen from "./ShareScreen";
+import Test from "./Test";
 
 interface RoomProps {
   children?: React.ReactNode;
@@ -13,6 +14,8 @@ const mediaSetting = {
 
 export const socket = io(import.meta.env.VITE_SERVER, {
   reconnection: false,
+  secure: true,
+  transports: ["polling"],
 });
 
 interface IGlobalContext {
@@ -30,6 +33,7 @@ const App: React.FC<RoomProps> = ({ children }) => {
   const [type, setType] = useState<"camera" | "screen">("screen");
   const [shareScreen, setShareScreen] = useState(false);
   const [screenId, setScreenId] = useState("");
+  const [test, setTest] = useState(false);
 
   const getStream = (type: "screen" | "camera") => {
     setType(type);
@@ -51,7 +55,7 @@ const App: React.FC<RoomProps> = ({ children }) => {
   };
   return (
     <GlobalContext.Provider value={{ screenId, setScreenId }}>
-      {type === "camera" && (
+      {/* {type === "camera" && (
         <>
           <button
             onClick={() => {
@@ -88,7 +92,16 @@ const App: React.FC<RoomProps> = ({ children }) => {
             Share Screen
           </button>
         </>
-      )}
+      )} */}
+      <button
+        onClick={() => {
+          getStream("camera");
+          setTest(true);
+        }}
+      >
+        Test Here
+      </button>
+      {test && media && <Test media={media} />}
     </GlobalContext.Provider>
   );
 };
