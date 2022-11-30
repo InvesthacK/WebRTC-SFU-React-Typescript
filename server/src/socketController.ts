@@ -105,6 +105,7 @@ export const socketController = (socket: Socket, _io: Server) => {
       username: string;
       offer: RTCSessionDescriptionInit;
     }) => {
+      console.log("join request: ", { username });
       let stream: MediaStream | undefined;
       let dataChannel: RTCDataChannel | undefined;
       const peer: RTCPeerConnection = new webrtc.RTCPeerConnection({
