@@ -1,0 +1,12 @@
+# Modules
+node_modules
+
+# Electron Builds
+release/
+
+# JS build
+dist/
+
+# Lock file
+yarn.lock
+package-lock.json
