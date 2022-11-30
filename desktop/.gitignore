@@ -1,12 +1,31 @@
-# Modules
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
 node_modules
+dist
+dist-ssr
+*.local
 
-# Electron Builds
-release/
+# Enviroment
+.env
 
-# JS build
-dist/
+# Editor directories and files
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
-# Lock file
-yarn.lock
+release
+.vscode/.debug.env
 package-lock.json
+pnpm-lock.yaml
+yarn.lock
