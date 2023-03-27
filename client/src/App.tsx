@@ -1,61 +1,61 @@
 import React, { useState } from "react";
 import { io } from "socket.io-client";
-import Room from "./Room";
-import ShareScreen from "./ShareScreen";
 import Test from "./Test";
 
 interface RoomProps {
-  children?: React.ReactNode;
+    children?: React.ReactNode;
 }
 
 const mediaSetting = {
-  video: true,
+    video: true,
 };
 
 export const socket = io(import.meta.env.VITE_SERVER, {
-  reconnection: false,
-  secure: true,
-  transports: ["polling"],
+    reconnection: false,
+    secure: true,
+    transports: ["polling"],
 });
 
 interface IGlobalContext {
-  screenId: string;
-  setScreenId: React.Dispatch<React.SetStateAction<string>>;
+    screenId: string;
+    setScreenId: React.Dispatch<React.SetStateAction<string>>;
 }
 
 export const GlobalContext = React.createContext<IGlobalContext>({
-  screenId: "",
-  setScreenId: () => {},
+    screenId: "",
+    setScreenId: () => {},
 });
 
 const App: React.FC<RoomProps> = ({ children }) => {
-  const [media, setMedia] = useState<MediaStream | null>(null);
-  const [type, setType] = useState<"camera" | "screen">("screen");
-  const [shareScreen, setShareScreen] = useState(false);
-  const [screenId, setScreenId] = useState("");
-  const [test, setTest] = useState(false);
+    const [media, setMedia] = useState<MediaStream | null>(null);
+    const [type, setType] = useState<"camera" | "screen">("screen");
+    const [shareScreen, setShareScreen] = useState(false);
+    const [screenId, setScreenId] = useState("");
+    const [test, setTest] = useState(false);
 
-  const getStream = (type: "screen" | "camera") => {
-    setType(type);
-    switch (type) {
-      case "camera":
-        navigator.mediaDevices.getUserMedia(mediaSetting).then((media) => {
-          setMedia(media);
-        });
-        break;
+    const getStream = (type: "screen" | "camera") => {
+        setType(type);
+        switch (type) {
+            case "camera":
+                navigator.mediaDevices
+                    .getUserMedia(mediaSetting)
+                    .then((media) => {
+                        setMedia(media);
+                    });
+                break;
 
-      case "screen":
-        navigator.mediaDevices.getDisplayMedia().then((media) => {
-          setMedia(media);
-        });
-        break;
-      default:
-        break;
-    }
-  };
-  return (
-    <GlobalContext.Provider value={{ screenId, setScreenId }}>
-      {/* {type === "camera" && (
+            case "screen":
+                navigator.mediaDevices.getDisplayMedia().then((media) => {
+                    setMedia(media);
+                });
+                break;
+            default:
+                break;
+        }
+    };
+    return (
+        <GlobalContext.Provider value={{ screenId, setScreenId }}>
+            {/* {type === "camera" && (
         <>
           <button
             onClick={() => {
@@ -93,16 +93,16 @@ const App: React.FC<RoomProps> = ({ children }) => {
           </button>
         </>
       )} */}
-      <button
-        onClick={() => {
-          getStream("camera");
-          setTest(true);
-        }}
-      >
-        Test Here
-      </button>
-      {test && media && <Test media={media} />}
-    </GlobalContext.Provider>
-  );
+            <button
+                onClick={() => {
+                    getStream("camera");
+                    setTest(true);
+                }}
+            >
+                Test Here
+            </button>
+            {test && media && <Test media={media} />}
+        </GlobalContext.Provider>
+    );
 };
 export default App;
