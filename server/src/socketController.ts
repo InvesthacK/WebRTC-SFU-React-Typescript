@@ -28,32 +28,14 @@ const queuedConsumerOffers: {
 
 // const streams: MediaStream[] = [];
 
-export const socketController = (socket: Socket, _io: Server) => {
+export const socketController = (socket: Socket, _io: Server, iceServers: any[]) => {
+  console.log(iceServers);
+
   socket.on("test-ting", async ({ offer }) => {
     let stream: MediaStream | undefined = undefined;
     const offerCandidate: any[] = [];
     const pc: RTCPeerConnection = new webrtc.RTCPeerConnection({
-      iceServers: [
-        // { urls: process.env.STUNSERVER_1 },
-        // {
-        //   urls: process.env.STUNSERVER_2,
-        //   username: process.env.XIRSYS_USERNAME,
-        //   credential: process.env.XIRSYS_CREDENTIAL,
-        // },
-        {
-          urls: "stun:stun.l.google.com:19302",
-        },
-        {
-          urls: "turn:192.158.29.39:3478?transport=udp",
-          credential: "JZEOEt2V3Qb0y27GRntt2u2PAYA=",
-          username: "28224511:1379330808",
-        },
-        {
-          urls: "turn:192.158.29.39:3478?transport=tcp",
-          credential: "JZEOEt2V3Qb0y27GRntt2u2PAYA=",
-          username: "28224511:1379330808",
-        },
-      ],
+      iceServers,
       iceCandidatePoolSize: 10,
     });
 
@@ -101,21 +83,7 @@ export const socketController = (socket: Socket, _io: Server) => {
     let stream: MediaStream | undefined;
     let dataChannel: RTCDataChannel | undefined;
     const peer: RTCPeerConnection = new webrtc.RTCPeerConnection({
-      iceServers: [
-        {
-          urls: "stun:stun.l.google.com:19302",
-        },
-        {
-          urls: "turn:192.158.29.39:3478?transport=udp",
-          credential: "JZEOEt2V3Qb0y27GRntt2u2PAYA=",
-          username: "28224511:1379330808",
-        },
-        {
-          urls: "turn:192.158.29.39:3478?transport=tcp",
-          credential: "JZEOEt2V3Qb0y27GRntt2u2PAYA=",
-          username: "28224511:1379330808",
-        },
-      ],
+      iceServers,
     });
     peer.ontrack = (e) => {
       console.log("---------------- on track");
@@ -221,14 +189,7 @@ export const socketController = (socket: Socket, _io: Server) => {
 
   socket.on("consumer", async ({ offer, username, streamName }) => {
     const peer: RTCPeerConnection = new webrtc.RTCPeerConnection({
-      iceServers: [
-        { urls: process.env.STUNSERVER_1 },
-        {
-          urls: process.env.STUNSERVER_2,
-          username: process.env.XIRSYS_USERNAME,
-          credential: process.env.XIRSYS_CREDENTIAL,
-        },
-      ],
+      iceServers,
     });
     users.map((u) => {
       if (u.username == streamName) {

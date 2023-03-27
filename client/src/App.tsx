@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { io } from "socket.io-client";
 import Test from "./Test";
+import Room from "./Room";
+import ShareScreen from "./ShareScreen";
 
 interface RoomProps {
     children?: React.ReactNode;
@@ -55,45 +57,45 @@ const App: React.FC<RoomProps> = ({ children }) => {
     };
     return (
         <GlobalContext.Provider value={{ screenId, setScreenId }}>
-            {/* {type === "camera" && (
-        <>
-          <button
-            onClick={() => {
-              setShareScreen(true);
-            }}
-          >
-            Screen Sharing
-          </button>
-        </>
-      )}
-      {media ? (
-        <>
-          <Room media={media} />
-          {shareScreen && (
-            <>
-              <ShareScreen />
-            </>
-          )}
-        </>
-      ) : (
-        <>
-          <button
-            onClick={() => {
-              getStream("camera");
-            }}
-          >
-            Use Camera
-          </button>
-          <button
-            onClick={() => {
-              getStream("screen");
-            }}
-          >
-            Share Screen
-          </button>
-        </>
-      )} */}
-            <button
+            {type === "camera" && (
+                <>
+                    <button
+                        onClick={() => {
+                            setShareScreen(true);
+                        }}
+                    >
+                        Screen Sharing
+                    </button>
+                </>
+            )}
+            {media ? (
+                <>
+                    <Room media={media} />
+                    {shareScreen && (
+                        <>
+                            <ShareScreen />
+                        </>
+                    )}
+                </>
+            ) : (
+                <>
+                    <button
+                        onClick={() => {
+                            getStream("camera");
+                        }}
+                    >
+                        Use Camera
+                    </button>
+                    <button
+                        onClick={() => {
+                            getStream("screen");
+                        }}
+                    >
+                        Share Screen
+                    </button>
+                </>
+            )}
+            {/* <button
                 onClick={() => {
                     getStream("camera");
                     setTest(true);
@@ -101,7 +103,7 @@ const App: React.FC<RoomProps> = ({ children }) => {
             >
                 Test Here
             </button>
-            {test && media && <Test media={media} />}
+            {test && media && <Test media={media} />} */}
         </GlobalContext.Provider>
     );
 };

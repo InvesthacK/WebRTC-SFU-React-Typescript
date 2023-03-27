@@ -13,14 +13,25 @@ const io = new Server(httpServer, {
 
 import dotenv from "dotenv";
 
-dotenv.config();
+dotenv.config({
+  path: __dirname + "/../.env",
+});
+
+let iceServers = [
+  { urls: process.env.STUNSERVER_1 },
+  {
+    urls: process.env.STUNSERVER_2,
+    username: process.env.XIRSYS_USERNAME,
+    credential: process.env.XIRSYS_CREDENTIAL,
+  },
+];
 
 const port = process.env.PORT || 5050;
 app.use(cors());
 
 io.on("connection", (socket) => {
   console.log("get connection");
-  socketController(socket, io);
+  socketController(socket, io, iceServers);
 });
 
 app.get("*", (_, res) => {
