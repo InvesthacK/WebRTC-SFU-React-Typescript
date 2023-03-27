@@ -96,109 +96,100 @@ export const socketController = (socket: Socket, _io: Server) => {
     });
   });
 
-  socket.on(
-    "join",
-    async ({
-      username,
-      offer,
-    }: {
-      username: string;
-      offer: RTCSessionDescriptionInit;
-    }) => {
-      console.log("join request: ", { username });
-      let stream: MediaStream | undefined;
-      let dataChannel: RTCDataChannel | undefined;
-      const peer: RTCPeerConnection = new webrtc.RTCPeerConnection({
-        iceServers: [
-          {
-            urls: "stun:stun.l.google.com:19302",
-          },
-          {
-            urls: "turn:192.158.29.39:3478?transport=udp",
-            credential: "JZEOEt2V3Qb0y27GRntt2u2PAYA=",
-            username: "28224511:1379330808",
-          },
-          {
-            urls: "turn:192.158.29.39:3478?transport=tcp",
-            credential: "JZEOEt2V3Qb0y27GRntt2u2PAYA=",
-            username: "28224511:1379330808",
-          },
-        ],
-      });
-      peer.ontrack = (e) => {
-        console.log("---------------- on track");
-        if (e.streams && e.streams[0]) {
-          if (!stream) {
-            stream = e.streams[0];
-          }
-        } else {
-          console.log("--------------- NOOOOOOOOOOO");
+  socket.on("join", async ({ username, offer }: { username: string; offer: RTCSessionDescriptionInit }) => {
+    console.log("join request: ", { username });
+    let stream: MediaStream | undefined;
+    let dataChannel: RTCDataChannel | undefined;
+    const peer: RTCPeerConnection = new webrtc.RTCPeerConnection({
+      iceServers: [
+        {
+          urls: "stun:stun.l.google.com:19302",
+        },
+        {
+          urls: "turn:192.158.29.39:3478?transport=udp",
+          credential: "JZEOEt2V3Qb0y27GRntt2u2PAYA=",
+          username: "28224511:1379330808",
+        },
+        {
+          urls: "turn:192.158.29.39:3478?transport=tcp",
+          credential: "JZEOEt2V3Qb0y27GRntt2u2PAYA=",
+          username: "28224511:1379330808",
+        },
+      ],
+    });
+    peer.ontrack = (e) => {
+      console.log("---------------- on track");
+      if (e.streams && e.streams[0]) {
+        if (!stream) {
+          stream = e.streams[0];
         }
-      };
-
-      peer.ondatachannel = (e) => {
-        console.log("ohh data channel :)");
-        // dataChannel = e.channel;
-        users.forEach((u) => {
-          if (u.username === username) {
-            u.dataChannel = e.channel;
-          }
-        });
-        e.channel.onmessage = (_e) => {
-          console.log(_e.data);
-          // e.channel.send(_e.data);
-          users.map((u) => {
-            if (u.dataChannel) {
-              u.dataChannel.send(_e.data);
-            } else {
-              console.log("no data channel");
-            }
-          });
-        };
-      };
-
-      await peer.setRemoteDescription(new webrtc.RTCSessionDescription(offer));
-
-      users.push({
-        username: username,
-        peer,
-        stream,
-        dataChannel,
-      });
-
-      socket.broadcast.emit("new-user", { username, peer });
-
-      const answer = await peer.createAnswer();
-      await peer.setLocalDescription(answer);
-      // Check if have offer queued
-      const offers = queuedOffers.find((o) => o.username === username);
-      if (offers) {
-        offers.offers.forEach((offer) => {
-          console.log("adding line 98");
-          peer.addIceCandidate(new webrtc.RTCIceCandidate(offer));
-        });
+      } else {
+        console.log("--------------- NOOOOOOOOOOO");
       }
+    };
 
-      peer.onconnectionstatechange = () => {
-        if (peer.connectionState === "connected") {
+    peer.ondatachannel = (e) => {
+      console.log("ohh data channel :)");
+      // dataChannel = e.channel;
+      users.forEach((u) => {
+        if (u.username === username) {
+          u.dataChannel = e.channel;
         }
+      });
+      e.channel.onmessage = (_e) => {
+        console.log(_e.data);
+        // e.channel.send(_e.data);
+        users.map((u) => {
+          if (u.dataChannel) {
+            u.dataChannel.send(_e.data);
+          } else {
+            console.log("no data channel");
+          }
+        });
       };
+    };
 
-      peer.onicecandidate = (e) => {
-        console.log("have ANSWER candidate");
-        if (e.candidate) {
-          socket.emit("add-answer-candidate", { candidate: e.candidate });
-        }
-      };
+    await peer.setRemoteDescription(new webrtc.RTCSessionDescription(offer));
 
-      socket.emit("answer", { answer, to: username });
-      socket.on("disconnect", () => {
-        users = users.filter((u) => u.username !== username);
-        consumers = consumers.filter((u) => u.username === username);
-        socket.broadcast.emit("user-leave", { users });
+    users.push({
+      username: username,
+      peer,
+      stream,
+      dataChannel,
+    });
+
+    socket.broadcast.emit("new-user", { username, peer });
+
+    const answer = await peer.createAnswer();
+    await peer.setLocalDescription(answer);
+    // Check if have offer queued
+    const offers = queuedOffers.find((o) => o.username === username);
+    if (offers) {
+      offers.offers.forEach((offer) => {
+        console.log("adding line 98");
+        peer.addIceCandidate(new webrtc.RTCIceCandidate(offer));
       });
     }
-  );
+
+    peer.onconnectionstatechange = () => {
+      if (peer.connectionState === "connected") {
+      }
+    };
+
+    peer.onicecandidate = (e) => {
+      console.log("have ANSWER candidate");
+      if (e.candidate) {
+        socket.emit("add-answer-candidate", { candidate: e.candidate });
+      }
+    };
+
+    socket.emit("answer", { answer, to: username });
+    socket.on("disconnect", () => {
+      users = users.filter((u) => u.username !== username);
+      consumers = consumers.filter((u) => u.username === username);
+      socket.broadcast.emit("user-leave", { users });
+    });
+  });
 
   socket.on("add-offer-candidate", ({ candidate, username }) => {
     // console.log("had offer candidate");
@@ -267,10 +258,7 @@ export const socketController = (socket: Socket, _io: Server) => {
       });
     }
     peer.onconnectionstatechange = () => {
-      console.log(
-        "consumer: " + username + " connection state: ",
-        peer.connectionState
-      );
+      console.log("consumer: " + username + " connection state: ", peer.connectionState);
     };
     peer.onicecandidate = (e) => {
       console.log("have answer candidate");
@@ -286,33 +274,26 @@ export const socketController = (socket: Socket, _io: Server) => {
     socket.emit("consumer-answer", { answer, to: username, streamName });
   });
 
-  socket.on(
-    "consumer-add-offer-candidate",
-    ({ candidate, username, streamName }) => {
-      console.log("had offer candidate");
-      // Check if user is in users object
-      const consumer = consumers.find(
-        (u) => u.username === username && streamName === streamName
-      );
-      if (!consumer) {
-        // No user => Queu Offer Candidate
-        // check if already have offer queued
-        const queued = queuedConsumerOffers.find(
-          (qo) => qo.username === username
-        );
-        if (!queued) {
-          queuedConsumerOffers.push({ username, offers: [candidate] });
-        } else {
-          queued.offers.push(candidate);
-        }
+  socket.on("consumer-add-offer-candidate", ({ candidate, username, streamName }) => {
+    console.log("had offer candidate");
+    // Check if user is in users object
+    const consumer = consumers.find((u) => u.username === username && streamName === streamName);
+    if (!consumer) {
+      // No user => Queu Offer Candidate
+      // check if already have offer queued
+      const queued = queuedConsumerOffers.find((qo) => qo.username === username);
+      if (!queued) {
+        queuedConsumerOffers.push({ username, offers: [candidate] });
       } else {
-        // Have User in UsersObject => add candidate to peer
-
-        console.log("add line 228");
-        consumer.peer.addIceCandidate(new webrtc.RTCIceCandidate(candidate));
+        queued.offers.push(candidate);
       }
+    } else {
+      // Have User in UsersObject => add candidate to peer
+
+      console.log("add line 228");
+      consumer.peer.addIceCandidate(new webrtc.RTCIceCandidate(candidate));
     }
-  );
+  });
 
   socket.on("log", () => {
     socket.emit("logging", { users, consumers });
